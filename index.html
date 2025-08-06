@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>자동 제출 폼</title>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2107@1.1/JUA.css');
+
+        body {
+            font-family: 'Jua', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background: #fdfdfd;
+        }
+
+        h1 { font-size: 60px; margin: 10px 0; }
+        h2, h3 { margin: 5px 0; }
+        input, button, textarea {
+            font-family: 'Jua', sans-serif;
+            font-size: 16px;
+            margin: 5px;
+            padding: 5px 10px;
+        }
+        #entries input { margin: 3px; }
+        .entry-row { display: flex; align-items: center; }
+        .entry-row input { margin-right: 5px; }
+        #counter { font-size: 24px; margin: 20px 0; }
+        textarea { width: 90vw; height: 150px; margin-top: 10px; }
+        body::before {
+            content: "極秘";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 400px;
+            color: rgba(0, 0, 0, 0.05);
+            z-index: 0;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+<h1>Vote Shiter (極秘)</h1>
+<h2>Made by 린@RC9</h2>
+<p style="margin-top: 20px;">
+    <button onclick="document.getElementById('modal').style.display='flex'"
+            style="font-size: 20px; background: none; border: none; color: black; cursor: pointer; text-decoration: none;">
+        설명 보기
+    </button>
+</p>
+
+<div id="modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center;">
+    <div style="background:white; padding:20px 30px; border-radius:10px; width:90%; max-width:600px; max-height:80vh; overflow:auto; position:relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+        <button onclick="document.getElementById('modal').style.display='none'"
+                style="position:absolute; top:10px; right:10px; font-size:20px; border:none; background:none; cursor:pointer;">✕</button>
+        <h2 style="margin-top: 0;">설명</h2>
+        <p>아린놈이 만든 투표폭격기입니다!<br>Form Flooding, Brute Force 실습용<br>우리반 얘들 이름 랜덤으로 골라서 투표해줍니다. (값 "랜덤"으로 설정 시)</p>
+        <p>얼씨구 스튜디오 모의해킹 #2 - Vote Shiter 프로젝트 유출 금지<br>
+            <ruby>極<rt>극</rt></ruby><ruby>秘<rt>비</rt></ruby> 자료임.<br><ruby>悪<rt>악</rt></ruby><ruby>用<rt>용</rt></ruby> 금지</p>
+        <p>간격은 1이 가장 빠르고 5000이 가장 느림<br>
+            1로 하면 1초에 10~100표 들어갈 수 있지만 실패 포함됨<br>
+            1000이 가장 안정적임</p>
+        <p>요약:<br>
+            • 1000 : 안정적. 표 수 잘 나옴. 느림<br>
+            • 1 : 개빠름. 실패 포함되므로 실제 제출 수는 3으로 나눠야 정확함</p>
+        <p>- 중요한 것은 아름답게, 쓸모없는 것은 이상하게 <br /> - Project <ruby>要<rt>요</rt></ruby><ruby>雅<rt>아</rt></ruby><ruby>小<rt>소</rt><ruby>非<rt>비</rt></ruby></ruby></p>
+
+    </div>
+</div>
+
+
+<p>폼 URL: <input type="text" id="formUrl" style="width: 60vw;" value="https://docs.google.com/forms/d/e/1FAIpQLSf2wficdJgz9y8KMbGF16NTILA_PZ-3z1yo2fqG9y4ZuMqX5g/formResponse"></p>
+
+<div id="entries"></div>
+<button onclick="addEntry()">+ 항목 추가</button>
+
+<!--<p>폼 HTML 붙여넣기: ↓↓</p>-->
+<!--<textarea id="formSource" placeholder="폼 소스 HTML 붙여넣기"></textarea>-->
+<!--<button onclick="extractEntries()">폼 entry 자동 추출</button>-->
+
+<p>간격(ms): <input type="number" id="intervalInput" value="1000" min="1" max="5000"></p>
+<div id="counter">제출된 표 수: <span id="count">0</span></div>
+<a href="https://docs.google.com/spreadsheets/d/14HMVdifdGc_E88iE7SaLwiGPydubHhVP0vfca_LjQpI/edit?usp=sharing"        target="_blank"        style=" font-size: 20px; color: #000; text-decoration: none;">         예시 결과 보기     </a><br /><br />
+<button id="toggleBtn" style="width : 500px;">시작</button>
+<script>
+    let count = 0;
+    let intervalId = null;
+
+    function addEntry(entry = '', value = '') {
+        const row = document.createElement('div');
+        row.className = 'entry-row';
+        row.innerHTML = `
+                <input placeholder="entry.xxx" value="${entry}">
+                <input placeholder="값" value="${value}">
+                <button onclick="this.parentElement.remove()">삭제</button>
+            `;
+        document.getElementById('entries').appendChild(row);
+    }
+
+    // function extractEntries() {
+    //     const html = document.getElementById("formSource").value;
+    //     const matches = [...html.matchAll(/name="entry\.\d+"/g)];
+    //     const unique = [...new Set(matches.map(m => m[0].match(/entry\.\d+/)[0]))];
+    //     unique.forEach(entry => addEntry(entry, ""));
+    // }
+
+    function submitForm() {
+        const formUrl = document.getElementById("formUrl").value;
+        const payload = new URLSearchParams();
+
+        const rows = document.querySelectorAll(".entry-row");
+        for (let row of rows) {
+            const [entryInput, valueInput] = row.querySelectorAll("input");
+            const entry = entryInput.value.trim();
+            const value = valueInput.value.trim();
+
+            if (entry && value) {
+                const valueToUse = value.includes("랜덤") ? getRandomName() : value;
+                payload.append(entry, valueToUse);
+            }
+        }
+
+        fetch(formUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: payload.toString()
+        }).then(() => {
+            count++;
+            document.getElementById("count").textContent = count;
+            console.log(`제출됨 (${count})`);
+        }).catch(err => console.error(err));
+    }
+
+    function getRandomName() {
+        const names = ["랜덤","이라는 값을", "설정하였을 때", "나올 배열"];
+        return names[Math.floor(Math.random() * names.length)];
+    }
+
+    document.getElementById("toggleBtn").addEventListener("click", () => {
+        const btn = document.getElementById("toggleBtn");
+        const interval = Math.max(1, Math.min(5000, parseInt(document.getElementById("intervalInput").value) || 1000));
+
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+            btn.textContent = "시작";
+        } else {
+            submitForm();
+            intervalId = setInterval(submitForm, interval);
+            btn.textContent = "중지";
+        }
+    });
+
+    // 기본값으로 하나만
+    addEntry("entry.1092879583", "랜덤");
+    addEntry("entry.1119982633", "거북이 비행기");
+</script>
+</body>
+</html>
